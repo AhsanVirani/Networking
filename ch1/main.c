@@ -11,6 +11,9 @@
 #include <sys/types.h>         
 #include <sys/socket.h>
 
+ #define handle_error(msg) \
+           do { perror(msg); exit(EXIT_FAILURE); } while (0)
+
 char response[] = 
     "HTTP/1.1 200 OK\n"
     "Content-Type: text/html\n"
@@ -27,7 +30,7 @@ char response[] =
 int 
 main (int argc, char **argv)
 {
-    int sock, res, fd;
+    int sock, cfd;
     char *port;
     struct sockaddr_in myAddr;
 
@@ -39,13 +42,12 @@ main (int argc, char **argv)
     myAddr.sin_family = AF_INET;
     myAddr.sin_port   = htons( (uint16_t)strtoul( port, NULL, 10 ) );
 
-    res = bind(sock, (struct sockaddr *) &myAddr, sizeof(myAddr));
+    if( bind(sock, (struct sockaddr *) &myAddr, sizeof(myAddr)) == -1)
+        handle_error("bind");
     
     // 1 failure, 0 success
-    assert (!res);
-
-    res = listen(sock, 50);
-    assert (!res);
+    if (listen(sock, 50) == -1)
+        handle_error("listen");
 
     while(true) {
         
@@ -55,15 +57,17 @@ main (int argc, char **argv)
 
         bzero (&userAddr, sizeof(userAddr));
 
-        fd = accept(sock, (struct sockaddr *) &userAddr, &userAddrsize);
+        cfd = accept(sock, (struct sockaddr *) &userAddr, &userAddrsize);
+
+        if (cfd == -1)    
+            handle_error("accept");
+        
         printf("Got a connection\n");
         fflush(stdout);
-
-        assert(fd != -1);
         
-        write (fd, response, sizeof(response));
+        write (cfd, response, sizeof(response) - 1);
 
-        close ( fd );
+        close ( cfd );
     }
 
     return (0);
