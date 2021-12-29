@@ -11,13 +11,13 @@
 #include <sys/types.h>         
 #include <sys/socket.h>
 
- #define handle_error(msg) \
-           do { perror(msg); exit(EXIT_FAILURE); } while (0)
+#define handle_error(msg) \
+    do { perror(msg); exit(EXIT_FAILURE); } while (0)
 
 char response[] = 
     "HTTP/1.1 200 OK\n"
     "Content-Type: text/html\n"
-    "\n"
+
     "<html>"
         "<head>"
             "<title>PHP is the best!!!</title>"
