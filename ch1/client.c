@@ -40,7 +40,7 @@ main (int argc, char **argv)
 
     // checking arguments given correctly
     if (argc != 2)
-        handle_error("Please provide server IP");
+        handle_error("Please provide website name");
 
     // setting up
     int fd;
