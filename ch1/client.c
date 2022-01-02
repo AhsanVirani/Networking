@@ -15,22 +15,24 @@ Topic     : Socket Client in C
 // sockaddr
 #include <netinet/in.h>
 #include <netinet/ip.h>
+#include <netdb.h>
 #include <arpa/inet.h>
 
 // write
 #include <unistd.h>
 
 // defines
-#define PORT 80
+#define PORT    "80"
 #define MAX_LEN 1024
+#define STR_LEN 50
 // error handle definition
-#define handle_error(msg) \
-    do { perror(msg); exit(EXIT_FAILURE); } while (0)
+#define handle_error(msg) { perror(msg); exit(EXIT_FAILURE); }
 
+// buffer for getting IP addr
+char str[STR_LEN];
 // HTTP GET REQUEST
 const char BUFF[]      = "GET / HTTP/1.0\r\n\r\n";
 char response[MAX_LEN] = {0};
-
 
 int 
 main (int argc, char **argv) 
@@ -40,33 +42,51 @@ main (int argc, char **argv)
     if (argc != 2)
         handle_error("Please provide server IP");
 
+    // setting up
     int fd;
-    struct sockaddr_in addr;
-    size_t addr_size = sizeof(addr);
+    struct addrinfo * result, * rp;
+    struct addrinfo hints;
 
-    // bzero'ing the addr
-    bzero(&addr, sizeof(addr));
+    // bzero'ing the created structs
+    bzero(&hints, sizeof(hints));
+    bzero(&result, sizeof(result));
+    bzero(&rp, sizeof(rp));
     
-    // filling sockaddr in
-    if (inet_pton(AF_INET, argv[1], &(addr.sin_addr)) <= 0) // IPv4
-        handle_error("inet_pton failed");
-
-
-    addr.sin_port    = htons(PORT);
-    addr.sin_family  = AF_INET;
-
-    fd = socket(AF_INET, SOCK_STREAM, 0);
-    // check if fd
-    if(fd <= 0)
-        handle_error("socket failed");
-
-    printf("Socket connection made with descriptor: %d\n", fd);
-
-    // establishing a connection to a secure server
-    if (connect(fd, (struct sockaddr *) &addr, addr_size) == -1) 
-        handle_error("connection failed");
-
+    // setting up hints
+    hints.ai_family   = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags    = 0;
+    hints.ai_protocol = 0;
     
+    // gets the addr for dns
+    if ( (getaddrinfo(argv[1], PORT, &hints, &result)) != 0 )
+        handle_error("failed to get addr info");
+
+    // printing ip's returned
+    for (rp = result; rp != NULL; rp = rp->ai_next) {
+
+        // connect to socket 
+        fd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+        // check if fd
+        if(fd == -1)
+            continue;   // failed (retry)
+
+        printf("Socket connection made with descriptor: %d\n", fd);
+     
+        // establishing a connection to a secure server
+        if (connect(fd, rp->ai_addr, rp->ai_addrlen) != -1) 
+            break;
+
+        // close fd after work done
+        close(fd);
+    }    
+    
+    if (rp == NULL) {
+        handle_error("Failed to establish connection to server");
+        freeaddrinfo(result);
+        return EXIT_FAILURE;
+    }
+
     // writing request to server
     if (write(fd, BUFF, sizeof(BUFF)) <= 0) 
         handle_error("write failed");
@@ -76,6 +96,9 @@ main (int argc, char **argv)
     
     // printing the response on success
     printf("Response by server:\n%s\n", response);
+
+    // free result
+    freeaddrinfo(result);
 
     return 0;
 }
