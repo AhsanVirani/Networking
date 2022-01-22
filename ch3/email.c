@@ -25,7 +25,9 @@ void get_input(const char *prompt, char *buffer) {
 }
 
 // send formatted string directly to network
-void send_format(SOCKET server, const char *text, ...) {
+void 
+send_format(SOCKET server, const char *text, ...) 
+{
     char buffer[MAXINPUT];
     va_list args;
     va_start(args, text);
@@ -41,7 +43,9 @@ void send_format(SOCKET server, const char *text, ...) {
 // parse response from server
 // multiline response followed by '-' after code
 // returns parsed response code or 0 if nothing
-int parse_response(const char *response) {
+int 
+parse_response(const char *response) 
+{
     const char *k = response;
     // looking for 3 digit code
     if (!k[0] || !k[1] || !k[3])
@@ -62,15 +66,56 @@ int parse_response(const char *response) {
 }
 
 // waiting to receive a response on the network
-void wait_on_response(SOCKET server, int expecting) {
+void 
+wait_on_response(SOCKET server, int expecting) 
+{
     char response[MAXRESPONSE+1];
-    char * p=response;
+    char *p=response;
     char *end= response + MAXRESPONSE;
 
     int code = 0;
+
+    do {
+        int byte_received = recv(server, p, (end - p), 0)
+        if (byte_received < 1) {
+            fprintf(stderr, "Connection dropped.\n");
+            exit(1);
+        }
+
+        p += byte_received;
+        *p = 0;
+
+        if (p = end) {
+            fprintf(stderr, "Server response too large:\n");
+            fprintf(stderr, "%s", response);
+            exit(1);
+        }
+
+        code = parse_response(response);
+    } while (code == 0);
+
+    // printing output to screen
+    if (code != expecting) {
+        fprintf(stderr, "Error from server:\n");
+        fprintf(stderr, "%s", response);
+        exit(1);
+    }
+
+    printf("%s", response);
 }
 
-int main(void) {
+// creating client to connect to server
+SOCKET 
+connect_to_host(const char *hostname, const char *port) 
+{
+    printf("Configuring remote address...\n");
+    struct addrinfo hints;
+
+}
+
+int 
+main(void) 
+{
     const char *str = "300-my message is\n250 here okay\r\n\\0";
     printf("%d\n", parse_response(str));
 }
